@@ -8,27 +8,45 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Agregamos permisos explicitos para que el robot pueda escribir
+    permissions:
+      contents: write
     steps:
-      - name: 1. Descargar el codigo del repositorio
+      - name: 1. Descargar el codigo (Full Fetch)
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Esto hace que el robot vea TODO el historial
 
       - name: 2. Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: 3. Instalar librerias (ESTO ARREGLA EL ERROR DE YAHOO)
+      - name: 3. Instalar librerias
         run: |
           pip install --upgrade yfinance pandas curl_cffi
 
       - name: 4. Ejecutar el Robot Recolector
         run: python harvester.py
 
-      - name: 5. Guardar los cambios (ESTO ARREGLA EL ERROR DE PUSH)
+      - name: 5. Guardar los cambios (MODO ANTI-CHOQUE)
         run: |
           git config --global user.name 'GitHub Action Bot'
           git config --global user.email 'action@github.com'
-          git pull --rebase origin main
+          
+          # 1. Asegurarnos de que estamos en la rama correcta
+          git checkout main
+          
+          # 2. Agregar el archivo
           git add logit_data.csv
-          git commit -m "Actualizacion automatica: Datos Logit" || echo "No hay cambios"
-          git push origin main
+          
+          # 3. Solo hacer commit si hay cambios reales
+          if git diff --staged --quiet; then
+            echo "No hay cambios para guardar."
+          else
+            git commit -m "Actualizacion automatica: Datos Logit"
+            # 4. El truco maestro: Traer cambios y poner los del robot arriba (Rebase)
+            git pull --rebase origin main
+            # 5. Empujar con fuerza
+            git push origin main
+          fi
