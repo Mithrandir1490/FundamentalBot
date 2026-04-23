@@ -8,14 +8,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Agregamos permisos explicitos para que el robot pueda escribir
     permissions:
       contents: write
     steps:
-      - name: 1. Descargar el codigo (Full Fetch)
+      - name: 1. Descargar codigo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Esto hace que el robot vea TODO el historial
+          fetch-depth: 0
 
       - name: 2. Configurar Python
         uses: actions/setup-python@v4
@@ -26,27 +25,25 @@ jobs:
         run: |
           pip install --upgrade yfinance pandas curl_cffi
 
-      - name: 4. Ejecutar el Robot Recolector
-        run: python harvester.py
-
-      - name: 5. Guardar los cambios (MODO ANTI-CHOQUE)
+      - name: 4. Sincronizar con Santiago (Paso Clave)
         run: |
           git config --global user.name 'GitHub Action Bot'
           git config --global user.email 'action@github.com'
-          
-          # 1. Asegurarnos de que estamos en la rama correcta
-          git checkout main
-          
-          # 2. Agregar el archivo
+          # Esto baja tus ultimos cambios antes de que el robot empiece a trabajar
+          git pull origin main --rebase
+
+      - name: 5. Ejecutar el Robot Recolector
+        run: python harvester.py
+
+      - name: 6. Guardar y Empujar (Con fuerza)
+        run: |
           git add logit_data.csv
-          
-          # 3. Solo hacer commit si hay cambios reales
+          # Solo guardamos si realmente hay datos nuevos
           if git diff --staged --quiet; then
-            echo "No hay cambios para guardar."
+            echo "No hay cambios."
           else
             git commit -m "Actualizacion automatica: Datos Logit"
-            # 4. El truco maestro: Traer cambios y poner los del robot arriba (Rebase)
+            # Volvemos a jalar por si Santiago cambio algo en estos 15 minutos
             git pull --rebase origin main
-            # 5. Empujar con fuerza
             git push origin main
           fi
