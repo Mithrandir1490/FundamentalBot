@@ -2,9 +2,8 @@ name: Actualizacion Lunes 9am
 
 on:
   schedule:
-    # Se ejecuta todos los lunes a las 15:00 UTC (9:00 AM hora CDMX)
     - cron: '0 15 * * 1'
-  workflow_dispatch: # Boton para ejecutarlo manualmente cuando quieras
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -13,22 +12,23 @@ jobs:
       - name: 1. Descargar el codigo del repositorio
         uses: actions/checkout@v3
 
-      - name: 2. Configurar Python en la nube
+      - name: 2. Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: 3. Instalar y actualizar librerias (Fix Yahoo Error)
+      - name: 3. Instalar librerias (ESTO ARREGLA EL ERROR DE YAHOO)
         run: |
-          pip install --upgrade yfinance pandas
+          pip install --upgrade yfinance pandas curl_cffi
 
-      - name: 4. Ejecutar el Robot Recolector (harvester.py)
+      - name: 4. Ejecutar el Robot Recolector
         run: python harvester.py
 
-      - name: 5. Guardar los cambios en el repositorio
+      - name: 5. Guardar los cambios (ESTO ARREGLA EL ERROR DE PUSH)
         run: |
           git config --global user.name 'GitHub Action Bot'
           git config --global user.email 'action@github.com'
+          git pull --rebase origin main
           git add logit_data.csv
-          git commit -m "Actualizacion automatica: Datos Logit del Lunes" || echo "No hay cambios"
-          git push
+          git commit -m "Actualizacion automatica: Datos Logit" || echo "No hay cambios"
+          git push origin main
