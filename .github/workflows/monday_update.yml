@@ -1,0 +1,35 @@
+name: Actualizacion Lunes 9am
+
+on:
+  schedule:
+    # 9:00 AM CST (México) es aproximadamente las 3:00 PM UTC
+    # Se ejecuta todos los lunes (1)
+    - cron: '0 15 * * 1'
+  workflow_dispatch: # Esto permite que tú lo actives manualmente cuando quieras
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Descargar el codigo del repositorio
+        uses: actions/checkout@v3
+
+      - name: 2. Configurar Python en la nube
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 3. Instalar librerias necesarias
+        run: |
+          pip install yfinance pandas requests
+
+      - name: 4. Ejecutar el Robot Recolector (harvester.py)
+        run: python harvester.py
+
+      - name: 5. Guardar los cambios en el repositorio
+        run: |
+          git config --global user.name 'GitHub Action Bot'
+          git config --global user.email 'action@github.com'
+          git add logit_data.csv
+          git commit -m "Actualizacion automatica: Datos Logit del Lunes" || echo "No hay cambios que guardar"
+          git push
