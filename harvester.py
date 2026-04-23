@@ -2,7 +2,6 @@ import yfinance as yf
 import pandas as pd
 import time
 import random
-import requests
 
 # ==========================================
 # LISTA MAESTRA COMPLETA (175 TICKERS)
@@ -28,20 +27,8 @@ TICKERS = [
     "NFLX", "TSLA", "PYPL", "SHOP", "SE"
 ]
 
-# ==========================================
-# MOTOR RECOLECTOR
-# ==========================================
-def get_session():
-    """Crea una sesión con User-Agent para evitar bloqueos"""
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    })
-    return session
-
 def run_harvest():
     raw_data = []
-    sess = get_session()
     total = len(TICKERS)
     
     print(f"🚀 Iniciando recolección de {total} activos...")
@@ -49,38 +36,38 @@ def run_harvest():
     for i, ticker in enumerate(TICKERS):
         try:
             print(f"[{i+1}/{total}] Descargando: {ticker}")
-            t = yf.Ticker(ticker, session=sess)
+            
+            # Quitamos la sesión manual para que yfinance use su propia lógica interna
+            t = yf.Ticker(ticker)
             info = t.info
             
-            # Extraemos solo lo necesario para el modelo Logit
-            raw_data.append({
-                "Ticker": ticker,
-                "Sector": info.get('sector', 'Other'),
-                "MarketCap": info.get('marketCap'),
-                "PE_Fwd": info.get('forwardPE'),
-                "Growth": info.get('revenueGrowth'),
-                "ROE": info.get('returnOnEquity'),
-                "Margin": info.get('profitMargins'),
-                "D_E": info.get('debtToEquity'),
-                "Ebitda_G": info.get('earningsGrowth')
-            })
+            if info:
+                raw_data.append({
+                    "Ticker": ticker,
+                    "Sector": info.get('sector', 'Other'),
+                    "MarketCap": info.get('marketCap'),
+                    "PE_Fwd": info.get('forwardPE'),
+                    "Growth": info.get('revenueGrowth'),
+                    "ROE": info.get('returnOnEquity'),
+                    "Margin": info.get('profitMargins'),
+                    "D_E": info.get('debtToEquity'),
+                    "Ebitda_G": info.get('earningsGrowth')
+                })
             
-            # Pausa inteligente: cada 10 tickers una pausa más larga
-            if i % 10 == 0 and i > 0:
-                time.sleep(random.uniform(3, 6))
-            else:
-                time.sleep(random.uniform(0.5, 1.5))
+            # Pausa de seguridad para evitar bloqueos por volumen
+            time.sleep(random.uniform(1.2, 2.5))
                 
         except Exception as e:
             print(f"⚠️ Error en {ticker}: {e}")
             continue
 
-    # Convertir a DataFrame y guardar
-    df = pd.DataFrame(raw_data)
-    
-    # Limpieza básica antes de guardar
-    df.to_csv("logit_data.csv", index=False)
-    print("✅ Proceso terminado. Archivo 'logit_data.csv' actualizado.")
+    # Guardar los resultados en el CSV
+    if raw_data:
+        df = pd.DataFrame(raw_data)
+        df.to_csv("logit_data.csv", index=False)
+        print(f"✅ Proceso terminado. Se guardaron {len(df)} activos.")
+    else:
+        print("❌ No se pudo recolectar ningún dato.")
 
 if __name__ == "__main__":
     run_harvest()
