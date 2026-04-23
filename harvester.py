@@ -30,18 +30,16 @@ TICKERS = [
 def run_harvest():
     raw_data = []
     total = len(TICKERS)
-    
     print(f"🚀 Iniciando recolección de {total} activos...")
     
     for i, ticker in enumerate(TICKERS):
         try:
-            print(f"[{i+1}/{total}] Descargando: {ticker}")
+            print(f"[{i+1}/{total}] 🔍 Consultando: {ticker}")
             
-            # Quitamos la sesión manual para que yfinance use su propia lógica interna
             t = yf.Ticker(ticker)
             info = t.info
             
-            if info:
+            if info and 'sector' in info:
                 raw_data.append({
                     "Ticker": ticker,
                     "Sector": info.get('sector', 'Other'),
@@ -54,20 +52,20 @@ def run_harvest():
                     "Ebitda_G": info.get('earningsGrowth')
                 })
             
-            # Pausa de seguridad para evitar bloqueos por volumen
-            time.sleep(random.uniform(1.2, 2.5))
+            # PAUSA CRÍTICA: Al ser muchos tickers, necesitamos ir despacio 
+            # para que Yahoo no nos bloquee a mitad del camino.
+            time.sleep(random.uniform(1.5, 3.5))
                 
         except Exception as e:
             print(f"⚠️ Error en {ticker}: {e}")
             continue
 
-    # Guardar los resultados en el CSV
     if raw_data:
         df = pd.DataFrame(raw_data)
         df.to_csv("logit_data.csv", index=False)
-        print(f"✅ Proceso terminado. Se guardaron {len(df)} activos.")
+        print(f"📊 ¡Misión cumplida! Se guardaron {len(df)} activos.")
     else:
-        print("❌ No se pudo recolectar ningún dato.")
+        print("❌ El robot no pudo recolectar nada.")
 
 if __name__ == "__main__":
     run_harvest()
